@@ -60,7 +60,6 @@ show_header() {
     echo -e "${LIGHTYELLOW}Copyright © 2025 - Todos os direitos reservados${NC}"
     echo
 }
-
 # Função para verificar se um comando foi executado com sucesso
 check_success() {
     if [ $? -eq 0 ]; then
