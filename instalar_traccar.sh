@@ -20,6 +20,9 @@ if [[ "$(uname)" == "Linux" ]]; then
     fi
 fi
 
+# Remover arquivos temporários ao final do script
+trap 'rm -f /tmp/install_traccar.sh' EXIT
+
 # Cores para o terminal
 RED='\e[0;31m'
 GREEN='\e[0;32m'
