@@ -10,24 +10,15 @@
 if [[ "$(uname)" == "Linux" ]]; then
     # Verificar se o arquivo contém caracteres CRLF (\r\n)
     if grep -q $'\r' "$0"; then
-        echo -e "\e[38;5;220m[AVISO]\e[0m Detectado problema de compatibilidade!"
-        echo -e "\e[38;5;220m[AVISO]\e[0m O arquivo foi salvo com formato de quebra de linha do Windows (CRLF)."
-        echo -e "\e[38;5;220m[AVISO]\e[0m Convertendo para o formato Linux (LF)..."
+        echo -e "\e[38;5;220m[AVISO]\e[0m O script contém caracteres inválidos (CRLF). Convertendo para LF..."
         # Criar uma cópia temporária do script com o formato correto
-        if ! tr -d '\r' < "$0" > /tmp/install_traccar.sh; then
-            echo -e "\e[0;31m[ERRO]\e[0m Falha ao converter o arquivo. Por favor, use 'dos2unix' para converter manualmente."
-            exit 1
-        fi
+        tr -d '\r' < "$0" > /tmp/install_traccar.sh
         chmod +x /tmp/install_traccar.sh
-        echo -e "\e[38;5;154m[SUCESSO]\e[0m Formato corrigido com sucesso!"
-        echo -e "\e[38;5;154m[INFO]\e[0m Reiniciando o script com o formato correto...\n"
+        echo -e "\e[38;5;154m[SUCESSO]\e[0m Formato corrigido. Executando o script novamente...\n"
         # Executar a versão corrigida e sair
         exec /tmp/install_traccar.sh "$@"
     fi
 fi
-
-# Remover arquivos temporários ao final do script
-trap 'rm -f /tmp/install_traccar.sh' EXIT
 
 # Cores para o terminal
 RED='\e[0;31m'
@@ -60,6 +51,7 @@ show_header() {
     echo -e "${LIGHTYELLOW}Copyright © 2025 - Todos os direitos reservados${NC}"
     echo
 }
+
 # Função para verificar se um comando foi executado com sucesso
 check_success() {
     if [ $? -eq 0 ]; then
