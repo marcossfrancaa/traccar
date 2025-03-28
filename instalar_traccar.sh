@@ -1,22 +1,24 @@
 #!/bin/bash
 
-#!/bin/bash
-
-# Detectar e corrigir o formato do arquivo
-if [[ "$(uname)" == "Linux" ]]; then
-    # Verificar se o arquivo contém caracteres inválidos (CRLF)
-    if grep -q $'\r' "$0"; then
-        echo -e "\e[38;5;220m[AVISO]\e[0m O script contém caracteres inválidos (CRLF). Convertendo para LF..."
-        tr -d '\r' < "$0" > /tmp/install_traccar.sh
-        chmod +x /tmp/install_traccar.sh
-        exec /tmp/install_traccar.sh "$@"
-    fi
-fi
 # =================================================================
 # Script de Instalação e Configuração do Traccar
 # Copyright © 2025 - Todos os direitos reservados
 # Versão: 1.0
 # =================================================================
+
+# Detectar e corrigir o formato do arquivo
+if [[ "$(uname)" == "Linux" ]]; then
+    # Verificar se o arquivo contém caracteres CRLF (\r\n)
+    if grep -q $'\r' "$0"; then
+        echo -e "\e[38;5;220m[AVISO]\e[0m O script contém caracteres inválidos (CRLF). Convertendo para LF..."
+        # Criar uma cópia temporária do script com o formato correto
+        tr -d '\r' < "$0" > /tmp/install_traccar.sh
+        chmod +x /tmp/install_traccar.sh
+        echo -e "\e[38;5;154m[SUCESSO]\e[0m Formato corrigido. Executando o script novamente...\n"
+        # Executar a versão corrigida e sair
+        exec /tmp/install_traccar.sh "$@"
+    fi
+fi
 
 # Cores para o terminal
 RED='\e[0;31m'
@@ -52,7 +54,7 @@ show_header() {
 
 # Função para verificar se um comando foi executado com sucesso
 check_success() {
-     $? -eq 0 ]; then
+    if [ $? -eq 0 ]; then
         echo -e "${GREEN}[✓ SUCESSO]${NC} $1"
     else
         echo -e "${RED}[✗ ERRO]${NC} Falha ao executar: $1"
@@ -75,13 +77,13 @@ check_dependencies() {
         fi
     done
     
-     ${#MISSING_DEPS[@]} -ne 0 ]; then
+    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
         echo -e "${RED}[✗ ERRO]${NC} Dependências ausentes: ${MISSING_DEPS[@]}"
         echo -e "${YELLOW}[INFO]${NC} Tentando instalar as dependências necessárias..."
         
         if command -v apt &> /dev/null; then
             sudo apt update && sudo apt install -y ${MISSING_DEPS[@]}
-             $? -ne 0 ]; then
+            if [ $? -ne 0 ]; then
                 echo -e "${RED}[✗ ERRO]${NC} Não foi possível instalar as dependências. Abortando."
                 exit 1
             fi
@@ -96,7 +98,7 @@ check_dependencies() {
 
 # Função para fazer backup das configurações existentes
 backup_existing_config() {
-     -d "/opt/traccar" ]; then
+    if [ -d "/opt/traccar" ]; then
         echo -e "${YELLOW}[BACKUP]${NC} Detectada instalação existente do Traccar. Fazendo backup..."
         BACKUP_DIR="/opt/traccar_backup_$(date +%Y%m%d_%H%M%S)"
         sudo cp -r /opt/traccar $BACKUP_DIR
@@ -109,10 +111,10 @@ check_disk_space() {
     echo -e "${YELLOW}[VERIFICAÇÃO]${NC} Verificando espaço em disco..."
     
     FREE_SPACE=$(df -m / | awk 'NR==2 {print $4}')
-     $FREE_SPACE -lt 1024 ]; then
+    if [ $FREE_SPACE -lt 1024 ]; then
         echo -e "${YELLOW}[AVISO]${NC} Espaço em disco baixo: ${FREE_SPACE}MB disponíveis. Recomendado pelo menos 1GB."
         read -p "Deseja continuar mesmo assim? (s/n): " CONTINUE
-        [ ! $CONTINUE =~ ^[Ss]$ ]]; then
+        if [[ ! $CONTINUE =~ ^[Ss]$ ]]; then
             echo -e "${YELLOW}[INFO]${NC} Instalação cancelada pelo usuário."
             exit 0
         fi
@@ -143,9 +145,13 @@ show_progress() {
 show_header
 
 # Verificar se o script está sendo executado como root
- "$EUID" -ne 0 ]; then
+if [ "$EUID" -ne 0 ]; then
     echo -e "${YELLOW}[AVISO]${NC} Este script precisa ser executado como root ou com sudo."
-    echo -e "${YELLOW}[INFO]${NC} Continuando automaticamente com sudo..."
+    read -p "Deseja continuar com sudo? (s/n): " CONTINUE
+    if [[ ! $CONTINUE =~ ^[Ss]$ ]]; then
+        echo -e "${YELLOW}[INFO]${NC} Instalação cancelada pelo usuário."
+        exit 0
+    fi
     # Executar novamente com sudo
     exec sudo "$0" "$@"
 fi
@@ -166,16 +172,16 @@ echo -e "${GOLD}╚════════════════════�
 read -p "Digite o domínio ou IP do servidor (ex: traccar.meudominio.com ou 192.168.1.100): " DOMAIN_OR_IP
 
 # Validar entrada do domínio ou IP
-[ -z "$DOMAIN_OR_IP" ]]; then
+if [[ -z "$DOMAIN_OR_IP" ]]; then
     echo -e "${RED}[✗ ERRO]${NC} Domínio ou IP não pode estar vazio. Abortando."
     exit 1
 fi
 
 # Validar formato de IP
-[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     IFS='.' read -ra ADDR <<< "$DOMAIN_OR_IP"
     for i in "${ADDR[@]}"; do
-         $i -lt 0 ] || [ $i -gt 255 ]; then
+        if [ $i -lt 0 ] || [ $i -gt 255 ]; then
             echo -e "${RED}[✗ ERRO]${NC} Endereço IP inválido. Abortando."
             exit 1
         fi
@@ -429,7 +435,7 @@ echo -e "${GOLD}╔════════════════════�
 echo -e "${GOLD}║${NC} [ETAPA 19] Configurando SSL                                  ${GOLD}║${NC}"
 echo -e "${GOLD}╚════════════════════════════════════════════════════════════╝${NC}"
 show_progress $CURRENT_STEP $TOTAL_STEPS
-[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo -e "${YELLOW}[AVISO]${NC} IP detectado: $DOMAIN_OR_IP. SSL não será configurado automaticamente."
 else
     echo -e "${YELLOW}[SSL]${NC} Obtendo certificado SSL para $DOMAIN_OR_IP..."
@@ -474,26 +480,82 @@ if command -v ufw &> /dev/null; then
     sudo ufw allow 5000:5150/udp
     
     # Verificar se o firewall está ativo
-if sudo ufw status | grep -q "Status: active"; then
-    echo -e "${GREEN}[✓ SUCESSO]${NC} Regras de firewall configuradas."
-else
-    echo -e "${YELLOW}[AVISO]${NC} Firewall não está ativo. Ativando automaticamente..."
-    sudo ufw --force enable
-    check_success "Ativação do firewall" "Erro ao ativar o firewall."
-fi
+    if sudo ufw status | grep -q "Status: active"; then
+        echo -e "${GREEN}[✓ SUCESSO]${NC} Regras de firewall configuradas."
+    else
+        echo -e "${YELLOW}[AVISO]${NC} Firewall não está ativo. Deseja ativá-lo? (s/n): "
+        read -p "" ENABLE_FIREWALL
+        if [[ $ENABLE_FIREWALL =~ ^[Ss]$ ]]; then
+            sudo ufw --force enable
+            check_success "Ativação do firewall" "Erro ao ativar o firewall."
+        fi
     fi
 else
     echo -e "${YELLOW}[AVISO]${NC} UFW não está instalado. Pulando configuração de firewall."
 fi
 CURRENT_STEP=$((CURRENT_STEP + 1))
 
-# Removendo a etapa de cadastro do usuário administrador
-echo -e "${YELLOW}[AVISO]${NC} A criação do usuário administrador foi desativada."
-echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário administrador manualmente através da interface web após a instalação."
-sleep 3
+# Cadastrar usuário, email e senha
+echo -e "${GOLD}╔════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GOLD}║${NC} [ETAPA 21] Cadastrando usuário administrador                 ${GOLD}║${NC}"
+echo -e "${GOLD}╚════════════════════════════════════════════════════════════╝${NC}"
+show_progress $CURRENT_STEP $TOTAL_STEPS
+echo -e "${YELLOW}[USUÁRIO]${NC} Aguardando 10 segundos para garantir que o Traccar esteja pronto..."
+sleep 10
 
-# Continuar automaticamente sem pausa
-show_menu
+read -read -p "Digite o nome de usuário: " USERNAME
+read -p "Digite o email: " EMAIL
+read -sp "Digite a senha: " PASSWORD
+echo
+
+# Validar entradas
+if [[ -z "$USERNAME" || -z "$EMAIL" || -z "$PASSWORD" ]]; then
+    echo -e "${YELLOW}[AVISO]${NC} Todos os campos são obrigatórios."
+    echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
+else
+    # Verificar se o servidor está respondendo
+    echo -e "${YELLOW}[VERIFICAÇÃO]${NC} Verificando se o servidor Traccar está respondendo..."
+    MAX_RETRIES=5
+    RETRY_COUNT=0
+    SERVER_UP=false
+    
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if curl -s http://localhost:8082 > /dev/null; then
+            SERVER_UP=true
+            break
+        fi
+        echo -e "${YELLOW}[AGUARDE]${NC} Servidor ainda não está pronto. Tentativa ${RETRY_COUNT}/${MAX_RETRIES}..."
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        sleep 5
+    done
+    
+    if [ "$SERVER_UP" = true ]; then
+        # Criar usuário administrador via API do Traccar
+        echo -e "${YELLOW}[USUÁRIO]${NC} Criando usuário administrador..."
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:8082/api/users" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "name": "'"$USERNAME"'",
+                "email": "'"$EMAIL"'",
+                "password": "'"$PASSWORD"'",
+                "admin": true
+            }')
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+        
+        if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+            echo -e "${GREEN}[✓ SUCESSO]${NC} Usuário administrador cadastrado com sucesso!"
+        else
+            echo -e "${YELLOW}[AVISO]${NC} Não foi possível criar o usuário automaticamente (Código HTTP: $HTTP_CODE)."
+            echo -e "${YELLOW}[AVISO]${NC} Resposta do servidor: $RESPONSE_BODY"
+            echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
+        fi
+    else
+        echo -e "${YELLOW}[AVISO]${NC} O servidor Traccar não está respondendo após várias tentativas."
+        echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
+    fi
+fi
 
 # Criar script de manutenção
 echo -e "${GOLD}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -513,7 +575,7 @@ echo -e "${YELLOW}==== Script de Manutenção do Traccar ====${NC}"
 echo 
 
 # Verificar se está sendo executado como root
- "$EUID" -ne 0 ]; then
+if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}Este script precisa ser executado como root ou com sudo.${NC}"
     exit 1
 fi
@@ -551,11 +613,7 @@ restart_services() {
     docker-compose up -d
     systemctl restart nginx
     echo -e "${GREEN}Serviços reiniciados com sucesso!${NC}"
-    
-    # Aguardar alguns segundos para exibir as informações antes de voltar ao menu
-    sleep 3
-    
-    # Voltar automaticamente ao menu
+    read -p "Pressione Enter para continuar..."
     show_menu
 }
 
@@ -566,11 +624,7 @@ update_traccar() {
     docker-compose down
     docker-compose up -d
     echo -e "${GREEN}Traccar atualizado com sucesso!${NC}"
-    
-    # Aguardar alguns segundos para exibir as informações antes de voltar ao menu
-    sleep 3
-    
-    # Voltar automaticamente ao menu
+    read -p "Pressione Enter para continuar..."
     show_menu
 }
 
@@ -584,26 +638,26 @@ backup_traccar() {
     cd /opt
     tar -czf $BACKUP_FILE traccar
     
-     $? -eq 0 ]; then
-    echo -e "${GREEN}Backup criado com sucesso: ${BACKUP_FILE}${NC}"
-else
-    echo -e "${RED}Erro ao criar backup${NC}"
-fi
-
-# Listar backups existentes
-echo -e "${YELLOW}Backups disponíveis:${NC}"
-ls -lh $BACKUP_DIR
-
-# Removido o 'read' para evitar pausa
-show_menu
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Backup criado com sucesso: ${BACKUP_FILE}${NC}"
+    else
+        echo -e "${RED}Erro ao criar backup${NC}"
+    fi
+    
+    # Listar backups existentes
+    echo -e "${YELLOW}Backups disponíveis:${NC}"
+    ls -lh $BACKUP_DIR
+    
+    read -p "Pressione Enter para continuar..."
+    show_menu
 }
 
 restore_backup() {
     BACKUP_DIR="/opt/traccar_backups"
     
-     ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A $BACKUP_DIR)" ]; then
+    if [ ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A $BACKUP_DIR)" ]; then
         echo -e "${RED}Nenhum backup encontrado em $BACKUP_DIR${NC}"
-        # Removido o 'read' para evitar pausa
+        read -p "Pressione Enter para continuar..."
         show_menu
         return
     fi
@@ -612,7 +666,7 @@ restore_backup() {
     
     # Listar backups e adicionar índices
     BACKUPS=($(ls -t $BACKUP_DIR/*.tar.gz 2>/dev/null))
-     ${#BACKUPS[@]} -eq 0 ]; then
+    if [ ${#BACKUPS[@]} -eq 0 ]; then
         echo -e "${RED}Nenhum arquivo de backup encontrado${NC}"
         read -p "Pressione Enter para continuar..."
         show_menu
@@ -627,18 +681,18 @@ restore_backup() {
     
     read -p "Selecione o backup a restaurar: " BACKUP_INDEX
     
-     "$BACKUP_INDEX" -eq 0 ]; then
+    if [ "$BACKUP_INDEX" -eq 0 ]; then
         show_menu
         return
     fi
     
-     "$BACKUP_INDEX" -le ${#BACKUPS[@]} ]; then
+    if [ "$BACKUP_INDEX" -le ${#BACKUPS[@]} ]; then
         SELECTED_BACKUP=${BACKUPS[$((BACKUP_INDEX-1))]}
         
         echo -e "${YELLOW}Você selecionou: $(basename $SELECTED_BACKUP)${NC}"
         read -p "Tem certeza que deseja restaurar este backup? (s/n): " CONFIRM
         
-        [ $CONFIRM =~ ^[Ss]$ ]]; then
+        if [[ $CONFIRM =~ ^[Ss]$ ]]; then
             echo -e "${YELLOW}Parando serviços...${NC}"
             cd /opt/traccar
             docker-compose down
@@ -648,20 +702,20 @@ restore_backup() {
             mv traccar traccar_old_$(date +%Y%m%d_%H%M%S)
             tar -xzf $SELECTED_BACKUP
             
-      echo -e "${YELLOW}Iniciando serviços...${NC}"
-cd /opt/traccar
-docker-compose up -d
-
-echo -e "${GREEN}Backup restaurado com sucesso!${NC}"
-else
-    echo -e "${YELLOW}Restauração cancelada${NC}"
-fi
-else
-    echo -e "${RED}Índice inválido${NC}"
-fi
-
-# Removido o 'read' para evitar pausa
-show_menu
+            echo -e "${YELLOW}Iniciando serviços...${NC}"
+            cd /opt/traccar
+            docker-compose up -d
+            
+            echo -e "${GREEN}Backup restaurado com sucesso!${NC}"
+        else
+            echo -e "${YELLOW}Restauração cancelada${NC}"
+        fi
+    else
+        echo -e "${RED}Índice inválido${NC}"
+    fi
+    
+    read -p "Pressione Enter para continuar..."
+    show_menu
 }
 
 view_logs() {
@@ -688,9 +742,9 @@ view_logs() {
             tail -n 100 /var/log/nginx/error.log
             ;;
         4)
-             -d "/opt/traccar/logs" ]; then
+            if [ -d "/opt/traccar/logs" ]; then
                 LOG_FILES=($(ls -t /opt/traccar/logs/*.log 2>/dev/null))
-                 ${#LOG_FILES[@]} -eq 0 ]; then
+                if [ ${#LOG_FILES[@]} -eq 0 ]; then
                     echo -e "${RED}Nenhum arquivo de log encontrado${NC}"
                 else
                     for i in "${!LOG_FILES[@]}"; do
@@ -699,7 +753,7 @@ view_logs() {
                     
                     read -p "Selecione o arquivo de log: " LOG_INDEX
                     
-                     "$LOG_INDEX" -le ${#LOG_FILES[@]} ]; then
+                    if [ "$LOG_INDEX" -le ${#LOG_FILES[@]} ]; then
                         SELECTED_LOG=${LOG_FILES[$((LOG_INDEX-1))]}
                         echo -e "${YELLOW}$(basename $SELECTED_LOG):${NC}"
                         tail -n 100 $SELECTED_LOG
@@ -712,16 +766,16 @@ view_logs() {
             fi
             ;;
         0)
-     show_menu
-return
-;;
-*)
-    echo -e "${RED}Opção inválida${NC}"
-    ;;
-esac
-
-# Removido o 'read' para evitar pausa
-view_logs
+            show_menu
+            return
+            ;;
+        *)
+            echo -e "${RED}Opção inválida${NC}"
+            ;;
+    esac
+    
+    read -p "Pressione Enter para continuar..."
+    view_logs
 }
 
 check_status() {
@@ -740,10 +794,7 @@ check_status() {
     echo -e "\n${YELLOW}Uso de recursos do container:${NC}"
     docker stats traccar --no-stream
     
-    # Aguardar alguns segundos para exibir as informações antes de voltar ao menu
-    sleep 3
-    
-    # Voltar automaticamente ao menu
+    read -p "Pressione Enter para continuar..."
     show_menu
 }
 
@@ -751,30 +802,28 @@ clean_logs() {
     echo -e "${YELLOW}Limpando logs antigos...${NC}"
     
     # Limpar logs antigos do Traccar
-     -d "/opt/traccar/logs" ]; then
+    if [ -d "/opt/traccar/logs" ]; then
         echo "Logs do Traccar com mais de 30 dias:"
         find /opt/traccar/logs -name "*.log" -type f -mtime +30 -exec ls -lh {} \;
         
         read -p "Remover estes logs? (s/n): " CONFIRM
-        [ $CONFIRM =~ ^[Ss]$ ]]; then
+        if [[ $CONFIRM =~ ^[Ss]$ ]]; then
             find /opt/traccar/logs -name "*.log" -type f -mtime +30 -delete
             echo -e "${GREEN}Logs antigos removidos${NC}"
         fi
     fi
     
     # Rotacionar logs do Nginx
-echo -e "${YELLOW}Rotacionando logs do Nginx...${NC}"
-logrotate --force /etc/logrotate.d/nginx
-
-# Limpar containers antigos
-echo -e "${YELLOW}Removendo containers Docker não utilizados...${NC}"
-docker system prune -f
-
-echo -e "${GREEN}Limpeza concluída!${NC}"
-
-# Continuar automaticamente sem pausa
-sleep 2 # Aguarda 2 segundos para exibir a mensagem final antes de voltar ao menu
-show_menu
+    echo -e "${YELLOW}Rotacionando logs do Nginx...${NC}"
+    logrotate --force /etc/logrotate.d/nginx
+    
+    # Limpar containers antigos
+    echo -e "${YELLOW}Removendo containers Docker não utilizados...${NC}"
+    docker system prune -f
+    
+    echo -e "${GREEN}Limpeza concluída!${NC}"
+    read -p "Pressione Enter para continuar..."
+    show_menu
 }
 
 # Iniciar menu
@@ -796,13 +845,13 @@ echo -e "${NC}"
 echo -e "${GOLD}================================================================${NC}"
 echo -e "${GOLD}               INFORMAÇÕES DE ACESSO                           ${NC}"
 echo -e "${GOLD}================================================================${NC}"
-[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo -e "${LIGHTYELLOW}Acesse a interface web em:${NC} http://$DOMAIN_OR_IP"
 else
     echo -e "${LIGHTYELLOW}Acesse a interface web em:${NC} https://$DOMAIN_OR_IP"
 fi
 
-[ ! -z "$USERNAME" && ! -z "$EMAIL" && ! -z "$PASSWORD" ]]; then
+if [[ ! -z "$USERNAME" && ! -z "$EMAIL" && ! -z "$PASSWORD" ]]; then
     echo -e "${LIGHTYELLOW}Usuário:${NC} $USERNAME"
     echo -e "${LIGHTYELLOW}Email:${NC} $EMAIL"
     echo -e "${LIGHTYELLOW}Senha:${NC} $PASSWORD"
