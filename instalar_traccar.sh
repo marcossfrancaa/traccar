@@ -483,79 +483,24 @@ if command -v ufw &> /dev/null; then
     if sudo ufw status | grep -q "Status: active"; then
         echo -e "${GREEN}[✓ SUCESSO]${NC} Regras de firewall configuradas."
     else
-        echo -e "${YELLOW}[AVISO]${NC} Firewall não está ativo. Deseja ativá-lo? (s/n): "
-        read -p "" ENABLE_FIREWALL
-        if [[ $ENABLE_FIREWALL =~ ^[Ss]$ ]]; then
-            sudo ufw --force enable
-            check_success "Ativação do firewall" "Erro ao ativar o firewall."
-        fi
+        echo -e "${YELLOW}[AVISO]${NC} Firewall não está ativo. Ativando o firewall automaticamente..."
+        sudo ufw --force enable
+        check_success "Ativação do firewall" "Erro ao ativar o firewall."
     fi
 else
     echo -e "${YELLOW}[AVISO]${NC} UFW não está instalado. Pulando configuração de firewall."
 fi
 CURRENT_STEP=$((CURRENT_STEP + 1))
 
-# Cadastrar usuário, email e senha
+# Remover parte do código que solicita e tenta cadastrar o administrador
+
 echo -e "${GOLD}╔════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GOLD}║${NC} [ETAPA 21] Cadastrando usuário administrador                 ${GOLD}║${NC}"
+echo -e "${GOLD}║${NC} [ETAPA 21] Pulando a criação de usuário administrador     ${GOLD}║${NC}"
 echo -e "${GOLD}╚════════════════════════════════════════════════════════════╝${NC}"
 show_progress $CURRENT_STEP $TOTAL_STEPS
-echo -e "${YELLOW}[USUÁRIO]${NC} Aguardando 10 segundos para garantir que o Traccar esteja pronto..."
-sleep 10
 
-read -read -p "Digite o nome de usuário: " USERNAME
-read -p "Digite o email: " EMAIL
-read -sp "Digite a senha: " PASSWORD
-echo
-
-# Validar entradas
-if [[ -z "$USERNAME" || -z "$EMAIL" || -z "$PASSWORD" ]]; then
-    echo -e "${YELLOW}[AVISO]${NC} Todos os campos são obrigatórios."
-    echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
-else
-    # Verificar se o servidor está respondendo
-    echo -e "${YELLOW}[VERIFICAÇÃO]${NC} Verificando se o servidor Traccar está respondendo..."
-    MAX_RETRIES=5
-    RETRY_COUNT=0
-    SERVER_UP=false
-    
-    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        if curl -s http://localhost:8082 > /dev/null; then
-            SERVER_UP=true
-            break
-        fi
-        echo -e "${YELLOW}[AGUARDE]${NC} Servidor ainda não está pronto. Tentativa ${RETRY_COUNT}/${MAX_RETRIES}..."
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        sleep 5
-    done
-    
-    if [ "$SERVER_UP" = true ]; then
-        # Criar usuário administrador via API do Traccar
-        echo -e "${YELLOW}[USUÁRIO]${NC} Criando usuário administrador..."
-        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:8082/api/users" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "name": "'"$USERNAME"'",
-                "email": "'"$EMAIL"'",
-                "password": "'"$PASSWORD"'",
-                "admin": true
-            }')
-        
-        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-        RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
-        
-        if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
-            echo -e "${GREEN}[✓ SUCESSO]${NC} Usuário administrador cadastrado com sucesso!"
-        else
-            echo -e "${YELLOW}[AVISO]${NC} Não foi possível criar o usuário automaticamente (Código HTTP: $HTTP_CODE)."
-            echo -e "${YELLOW}[AVISO]${NC} Resposta do servidor: $RESPONSE_BODY"
-            echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
-        fi
-    else
-        echo -e "${YELLOW}[AVISO]${NC} O servidor Traccar não está respondendo após várias tentativas."
-        echo -e "${YELLOW}[AVISO]${NC} Você precisará criar o usuário manualmente através da interface web."
-    fi
-fi
+echo -e "${YELLOW}[USUÁRIO]${NC} O cadastro do usuário administrador deve ser feito manualmente através da interface web do Traccar."
+CURRENT_STEP=$((CURRENT_STEP + 1))
 
 # Criar script de manutenção
 echo -e "${GOLD}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -837,37 +782,39 @@ check_success "Criação do script de manutenção" "Erro ao criar script de man
 echo -e "${BRIGHTYELLOW}"
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║                                                            ║"
-echo "║            INSTALAÇÃO CONCLUÍDA COM SUCESSO!               ║"
+echo "║  🎉 ${BRIGHTGREEN}INSTALAÇÃO CONCLUÍDA COM SUCESSO!${BRIGHTYELLOW}                   ║"
 echo "║                                                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-echo -e "${GOLD}================================================================${NC}"
-echo -e "${GOLD}               INFORMAÇÕES DE ACESSO                           ${NC}"
-echo -e "${GOLD}================================================================${NC}"
+echo -e "${BOLDRED}=========================================================${NC}"
+echo -e "${BOLDRED}         🚀 INFORMAÇÕES DE ACESSO 🌐${NC}"
+echo -e "${BOLDRED}=========================================================${NC}"
+
 if [[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${LIGHTYELLOW}Acesse a interface web em:${NC} http://$DOMAIN_OR_IP"
+    echo -e "${BRIGHTGREEN}🌍 Acesse a interface web em:${NC} ${UNDERLINE}http://$DOMAIN_OR_IP${NC}"
 else
-    echo -e "${LIGHTYELLOW}Acesse a interface web em:${NC} https://$DOMAIN_OR_IP"
+    echo -e "${BRIGHTGREEN}🌍 Acesse a interface web em:${NC} ${UNDERLINE}https://$DOMAIN_OR_IP${NC}"
 fi
 
-if [[ ! -z "$USERNAME" && ! -z "$EMAIL" && ! -z "$PASSWORD" ]]; then
-    echo -e "${LIGHTYELLOW}Usuário:${NC} $USERNAME"
-    echo -e "${LIGHTYELLOW}Email:${NC} $EMAIL"
-    echo -e "${LIGHTYELLOW}Senha:${NC} $PASSWORD"
-fi
+# Informar sobre o cadastro do administrador
+echo -e "${BRIGHTYELLOW}🔐 No primeiro acesso, você precisará cadastrar o usuário administrador do sistema.${NC}"
+echo -e "${BRIGHTYELLOW}🔓 Após o primeiro acesso, será possível realizar o login com as credenciais de administrador.${NC}"
+echo
 
+echo -e "${BOLDBLUE}=========================================================${NC}"
+echo -e "${BOLDBLUE}         🛠️ COMANDOS ÚTEIS 🖥️${NC}"
+echo -e "${BOLDBLUE}=========================================================${NC}"
+
+echo -e "${BRIGHTCYAN}🔍 Para verificar status:${NC} ${MAGENTA}docker ps | grep traccar${NC}"
+echo -e "${BRIGHTCYAN}🔄 Para reiniciar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose restart${NC}"
+echo -e "${BRIGHTCYAN}⬆️ Para atualizar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose pull && docker-compose down && docker-compose up -d${NC}"
+echo -e "${BRIGHTCYAN}🛠️ Para manutenção:${NC} ${MAGENTA}sudo /opt/traccar/traccar-maintenance.sh${NC}"
 echo
-echo -e "${GOLD}================================================================${NC}"
-echo -e "${GOLD}               COMANDOS ÚTEIS                                  ${NC}"
-echo -e "${GOLD}================================================================${NC}"
-echo -e "${LIGHTYELLOW}Para verificar status:${NC} docker ps | grep traccar"
-echo -e "${LIGHTYELLOW}Para reiniciar:${NC} cd /opt/traccar && docker-compose restart"
-echo -e "${LIGHTYELLOW}Para atualizar:${NC} cd /opt/traccar && docker-compose pull && docker-compose down && docker-compose up -d"
-echo -e "${LIGHTYELLOW}Para manutenção:${NC} sudo /opt/traccar/traccar-maintenance.sh"
+
+echo -e "${BOLDGREEN}📧 Suporte: support@traccar.org${NC}"
 echo
-echo -e "${GREEN}Suporte: suporte@traccar.meudominio.com${NC}"
-echo
-echo -e "${YELLOW}Copyright © 2025 - Todos os direitos reservados${NC}"
+
+echo -e "${YELLOW}© 2025 - Todos os direitos reservados${NC}"
 echo -e "${YELLOW}Este script foi criado para facilitar a instalação e configuração do Traccar.${NC}"
-echo -e "${YELLOW}Contribua com o projeto: https://github.com/traccar/traccar${NC}"
+echo -e "${YELLOW}Contribua com o projeto: ${UNDERLINE}https://github.com/traccar/traccar${NC}"
