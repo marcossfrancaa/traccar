@@ -1,4 +1,16 @@
-mkdir ~/traccar
-cd ~/traccar
-curl -sSL https://raw.githubusercontent.com/marcossfrancaa/traccar/refs/heads/main/instalar_traccar.sh > install_traccar.sh
-chmod +x install_traccar.sh
+#!/bin/bash
+
+# Atualizar sistema e instalar dependências
+sudo apt update && sudo apt install -y dos2unix
+
+# Baixar o script de instalação do Traccar
+curl -sSL https://raw.githubusercontent.com/marcossfrancaa/traccar/refs/heads/main/instalar_traccar.sh > instalar_traccar.sh
+
+# Converter o formato do arquivo (remover caracteres CRLF)
+dos2unix instalar_traccar.sh
+
+# Tornar o script executável
+chmod +x instalar_traccar.sh
+
+# Executar o script de instalação
+sudo ./instalar_traccar.sh
