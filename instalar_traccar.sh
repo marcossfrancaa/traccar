@@ -782,37 +782,37 @@ check_success "Criação do script de manutenção" "Erro ao criar script de man
 echo -e "${BRIGHTYELLOW}"
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║                                                            ║"
-echo "║  🎉 ${BRIGHTGREEN}INSTALAÇÃO CONCLUÍDA COM SUCESSO!${BRIGHTYELLOW}                   ║"
+echo "║            INSTALAÇÃO CONCLUÍDA COM SUCESSO!               ║"
 echo "║                                                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
 echo -e "${BOLDRED}=========================================================${NC}"
-echo -e "${BOLDRED}         🚀 INFORMAÇÕES DE ACESSO 🌐${NC}"
+echo -e "${BOLDRED}         INFORMAÇÕES DE ACESSO${NC}"
 echo -e "${BOLDRED}=========================================================${NC}"
 
 if [[ $DOMAIN_OR_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${BRIGHTGREEN}🌍 Acesse a interface web em:${NC} ${UNDERLINE}http://$DOMAIN_OR_IP${NC}"
+    echo -e "${BRIGHTGREEN}Acesse a interface web em:${NC} ${UNDERLINE}http://$DOMAIN_OR_IP${NC}"
 else
-    echo -e "${BRIGHTGREEN}🌍 Acesse a interface web em:${NC} ${UNDERLINE}https://$DOMAIN_OR_IP${NC}"
+    echo -e "${BRIGHTGREEN}Acesse a interface web em:${NC} ${UNDERLINE}https://$DOMAIN_OR_IP${NC}"
 fi
 
 # Informar sobre o cadastro do administrador
-echo -e "${BRIGHTYELLOW}🔐 No primeiro acesso, você precisará cadastrar o usuário administrador do sistema.${NC}"
-echo -e "${BRIGHTYELLOW}🔓 Após o primeiro acesso, será possível realizar o login com as credenciais de administrador.${NC}"
+echo -e "${BRIGHTYELLOW}No primeiro acesso, você precisará cadastrar o usuário administrador do sistema.${NC}"
+echo -e "${BRIGHTYELLOW}Após o primeiro acesso, será possível realizar o login com as credenciais de administrador.${NC}"
 echo
 
 echo -e "${BOLDBLUE}=========================================================${NC}"
-echo -e "${BOLDBLUE}         🛠️ COMANDOS ÚTEIS 🖥️${NC}"
+echo -e "${BOLDBLUE}         COMANDOS ÚTEIS${NC}"
 echo -e "${BOLDBLUE}=========================================================${NC}"
 
-echo -e "${BRIGHTCYAN}🔍 Para verificar status:${NC} ${MAGENTA}docker ps | grep traccar${NC}"
-echo -e "${BRIGHTCYAN}🔄 Para reiniciar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose restart${NC}"
-echo -e "${BRIGHTCYAN}⬆️ Para atualizar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose pull && docker-compose down && docker-compose up -d${NC}"
-echo -e "${BRIGHTCYAN}🛠️ Para manutenção:${NC} ${MAGENTA}sudo /opt/traccar/traccar-maintenance.sh${NC}"
+echo -e "${BRIGHTCYAN}Para verificar status:${NC} ${MAGENTA}docker ps | grep traccar${NC}"
+echo -e "${BRIGHTCYAN}Para reiniciar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose restart${NC}"
+echo -e "${BRIGHTCYAN}Para atualizar:${NC} ${MAGENTA}cd /opt/traccar && docker-compose pull && docker-compose down && docker-compose up -d${NC}"
+echo -e "${BRIGHTCYAN}Para manutenção:${NC} ${MAGENTA}sudo /opt/traccar/traccar-maintenance.sh${NC}"
 echo
 
-echo -e "${BOLDGREEN}📧 Suporte: support@traccar.org${NC}"
+echo -e "${BOLDGREEN}Suporte: support@traccar.org${NC}"
 echo
 
 echo -e "${YELLOW}© 2025 - Todos os direitos reservados${NC}"
