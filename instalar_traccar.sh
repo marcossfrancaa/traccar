@@ -1,5 +1,17 @@
 #!/bin/bash
 
+#!/bin/bash
+
+# Detectar e corrigir o formato do arquivo
+if [[ "$(uname)" == "Linux" ]]; then
+    # Verificar se o arquivo contém caracteres inválidos (CRLF)
+    if grep -q $'\r' "$0"; then
+        echo -e "\e[38;5;220m[AVISO]\e[0m O script contém caracteres inválidos (CRLF). Convertendo para LF..."
+        tr -d '\r' < "$0" > /tmp/install_traccar.sh
+        chmod +x /tmp/install_traccar.sh
+        exec /tmp/install_traccar.sh "$@"
+    fi
+fi
 # =================================================================
 # Script de Instalação e Configuração do Traccar
 # Copyright © 2025 - Todos os direitos reservados
