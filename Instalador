@@ -1,0 +1,4 @@
+mkdir ~/traccar
+cd ~/traccar
+curl -sSL https://raw.githubusercontent.com/marcossfrancaa/traccar/refs/heads/main/instalar_traccar.sh > install_traccar.sh
+chmod +x install_traccar.sh
