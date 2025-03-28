@@ -6,20 +6,6 @@
 # Versão: 1.0
 # =================================================================
 
-# Detectar e corrigir o formato do arquivo
-[ "$(uname)" == "Linux" ]]; then
-    # Verificar se o arquivo contém caracteres CRLF (\r\n)
-    if grep -q $'\r' "$0"; then
-        echo -e "\e[38;5;220m[AVISO]\e[0m O script contém caracteres inválidos (CRLF). Convertendo para LF..."
-        # Criar uma cópia temporária do script com o formato correto
-        tr -d '\r' < "$0" > /tmp/install_traccar.sh
-        chmod +x /tmp/install_traccar.sh
-        echo -e "\e[38;5;154m[SUCESSO]\e[0m Formato corrigido. Executando o script novamente...\n"
-        # Executar a versão corrigida e sair
-        exec /tmp/install_traccar.sh "$@"
-    fi
-fi
-
 # Cores para o terminal
 RED='\e[0;31m'
 GREEN='\e[0;32m'
