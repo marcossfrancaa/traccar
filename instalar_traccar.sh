@@ -128,17 +128,32 @@ show_progress() {
     local PROGRESS=$1
     local TOTAL=$2
     local PERCENTAGE=$((PROGRESS * 100 / TOTAL))
-    local COMPLETED=$((PROGRESS * 50 / TOTAL))
-    local REMAINING=$((50 - COMPLETED))
+    local COMPLETED=$((PROGRESS * 70 / TOTAL))
+    local REMAINING=$((70 - COMPLETED))
     
-    echo -ne "${YELLOW}["
+    echo -e "\n${GOLD}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GOLD}║${NC}                     PROGRESSO DA INSTALAÇÃO                 ${GOLD}║${NC}"
+    echo -e "${GOLD}╚════════════════════════════════════════════════════════════╝${NC}"
+    
+    echo -ne "\n${YELLOW}   ["
     for ((i=0; i<COMPLETED; i++)); do
         echo -ne "█"
     done
     for ((i=0; i<REMAINING; i++)); do
         echo -ne "░"
     done
-    echo -ne "] ${PERCENTAGE}%${NC}\r"
+    echo -ne "] ${PERCENTAGE}%${NC}"
+    
+    if [ $PERCENTAGE -eq 100 ]; then
+        echo -e "\n\n${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${GREEN}║${NC}                 INSTALAÇÃO CONCLUÍDA COM SUCESSO!           ${GREEN}║${NC}"
+        echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}\n"
+    elif [ $PERCENTAGE -eq 0 ]; then
+        echo -e "\n\n${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${YELLOW}║${NC}                 INICIANDO INSTALAÇÃO...                    ${YELLOW}║${NC}"
+        echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}\n"
+    fi
+    echo -ne "\n"
 }
 
 # Exibir cabeçalho
@@ -349,6 +364,22 @@ show_progress $CURRENT_STEP $TOTAL_STEPS
 sudo tee /opt/traccar/docker-compose.yml > /dev/null <<EOL
 version: '3.8'
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: traccar-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=traccar
+      - POSTGRES_PASSWORD=traccar
+      - POSTGRES_DB=traccar
+    volumes:
+      - /opt/traccar/postgresql:/var/lib/postgresql/data:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traccar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   traccar:
     image: traccar/traccar:latest
     container_name: traccar
@@ -363,6 +394,14 @@ services:
       - /opt/traccar/data:/opt/traccar/data:rw
     environment:
       - TZ=America/Sao_Paulo
+      - TRACCAR_DB_DRIVER=org.postgresql.Driver
+      - TRACCAR_DB_URL=jdbc:postgresql://postgres:5432/traccar
+      - TRACCAR_DB_USERNAME=traccar
+      - TRACCAR_DB_PASSWORD=traccar
+      - JAVA_OPTS=-Xms512M -Xmx1G
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082"]
       interval: 30s
@@ -563,12 +602,54 @@ restart_services() {
 }
 
 update_traccar() {
-    echo -e "${YELLOW}Atualizando Traccar...${NC}"
+    echo -e "${YELLOW}Verificando atualizações disponíveis...${NC}"
+    
+    # Criar backup automático antes da atualização
+    echo -e "${YELLOW}Criando backup de segurança...${NC}"
+    BACKUP_DIR="/opt/traccar_backups"
+    BACKUP_FILE="${BACKUP_DIR}/pre_update_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+    
+    mkdir -p $BACKUP_DIR
+    cd /opt
+    tar -czf $BACKUP_FILE traccar
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Erro ao criar backup de segurança. Atualização cancelada.${NC}"
+        read -p "Pressione Enter para continuar..."
+        show_menu
+        return
+    fi
+    
+    echo -e "${GREEN}Backup de segurança criado com sucesso: ${BACKUP_FILE}${NC}"
+    
+    # Obter versão atual
     cd /opt/traccar
+    CURRENT_VERSION=$(docker-compose exec -T traccar /opt/traccar/bin/traccar --version 2>/dev/null || echo "unknown")
+    
+    echo -e "${YELLOW}Versão atual: ${CURRENT_VERSION}${NC}"
+    echo -e "${YELLOW}Baixando última versão...${NC}"
+    
+    # Atualizar imagem e verificar se há mudanças
     docker-compose pull
+    
+    echo -e "${YELLOW}Aplicando atualização...${NC}"
     docker-compose down
     docker-compose up -d
-    echo -e "${GREEN}Traccar atualizado com sucesso!${NC}"
+    
+    # Aguardar inicialização do container
+    sleep 10
+    
+    # Verificar nova versão
+    NEW_VERSION=$(docker-compose exec -T traccar /opt/traccar/bin/traccar --version 2>/dev/null || echo "unknown")
+    
+    if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+        echo -e "${GREEN}Atualização concluída com sucesso!${NC}"
+        echo -e "${YELLOW}Nova versão: ${NEW_VERSION}${NC}"
+        echo -e "${YELLOW}Backup de segurança disponível em: ${BACKUP_FILE}${NC}"
+    else
+        echo -e "${GREEN}Sistema já está na versão mais recente!${NC}"
+    fi
+    
     read -p "Pressione Enter para continuar..."
     show_menu
 }
